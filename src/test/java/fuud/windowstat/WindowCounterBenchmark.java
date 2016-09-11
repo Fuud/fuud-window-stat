@@ -17,6 +17,7 @@
 
 package fuud.windowstat;
 
+import com.github.metricscore.hdr.counter.SmoothlyDecayingRollingCounter;
 import fuud.windowstat.util.BenchmarkRunnerUtil;
 import org.openjdk.jmh.annotations.*;
 
@@ -33,21 +34,25 @@ public class WindowCounterBenchmark {
 
     @State(Scope.Group)
     public static class CounterState {
-
         public final WindowCounter counter = new WindowCounter(Duration.ofSeconds(3), 3, Clock.systemDefaultZone());
     }
 
+    @State(Scope.Group)
+    public static class MetricsCoreHdrCounterState {
+        public final SmoothlyDecayingRollingCounter counter = new SmoothlyDecayingRollingCounter(Duration.ofSeconds(3), 3);
+    }
+
     @State(Scope.Benchmark)
-    @Threads(THREAD_PER_OPERATION)
     public static class IncrementAtomicState {
         AtomicLong sum = new AtomicLong();
     }
 
     @State(Scope.Benchmark)
-    @Threads(THREAD_PER_OPERATION)
     public static class IncrementLongAdder {
         LongAdder sum = new LongAdder();
     }
+
+    // tests
 
     @Benchmark
     @Threads(THREAD_PER_OPERATION)
@@ -106,6 +111,22 @@ public class WindowCounterBenchmark {
     @Group("window_counter_add_read_smooth")
     @GroupThreads(THREAD_PER_OPERATION)
     public void benchmarkAddRead_read_smooth(CounterState state) {
+        state.counter.getSum();
+    }
+
+    // Compare to third-party implementation
+
+    @Benchmark
+    @Group("window_counter_add_read_hdr")
+    @GroupThreads(THREAD_PER_OPERATION)
+    public void benchmarkAddRead_add_hdr(MetricsCoreHdrCounterState state) {
+        state.counter.add(1);
+    }
+
+    @Benchmark
+    @Group("window_counter_add_read_hdr")
+    @GroupThreads(THREAD_PER_OPERATION)
+    public void benchmarkAddRead_read_hdr(MetricsCoreHdrCounterState state) {
         state.counter.getSum();
     }
 
