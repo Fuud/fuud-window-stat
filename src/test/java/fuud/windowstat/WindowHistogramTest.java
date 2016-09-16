@@ -33,6 +33,9 @@ public class WindowHistogramTest {
                     mean = 0;
                     samplesCount = 0;
 
+                    overflow = false;
+                    underflow = false;
+
                     percentile_00 = 0;
                     percentile_10 = 0;
                     percentile_20 = 0;
@@ -65,6 +68,9 @@ public class WindowHistogramTest {
                     mean = 0;
                     samplesCount = 0;
 
+                    overflow = false;
+                    underflow = false;
+
                     percentile_00 = 0;
                     percentile_10 = 0;
                     percentile_20 = 0;
@@ -95,6 +101,9 @@ public class WindowHistogramTest {
                     max = 5;
                     mean = 5;
                     samplesCount = 1;
+
+                    overflow = false;
+                    underflow = false;
 
                     // only one sample - it will meet all percentiles.
                     // Real value is 5, but histogram column from 4 to 6. Let's take bottom value.
@@ -130,6 +139,9 @@ public class WindowHistogramTest {
                     max = 5;
                     mean = 3;
                     samplesCount = 2;
+
+                    overflow = false;
+                    underflow = false;
 
                     percentile_00 = 0;
                     percentile_10 = 0;
@@ -171,6 +183,9 @@ public class WindowHistogramTest {
                     mean = 3;
                     samplesCount = 10;
 
+                    overflow = false;
+                    underflow = false;
+
                     percentile_00 = 0;
                     percentile_10 = 0;
                     percentile_20 = 0;
@@ -182,6 +197,114 @@ public class WindowHistogramTest {
                     percentile_80 = 4;
                     percentile_90 = 4;
                     percentile_100 = 4;
+                }});
+
+
+        //-----------------------------------
+        windowHistogram.add(-8);
+        /*
+                    __________________________________________________________________________________________
+                    |Time | Window |                                 Buckets                                  |
+                    |     |        | #0 [MinValue, 0) | #1 [0, 2) | #2 [2, 4) |  #3 [4, 6) | #4 [6, MaxValue) |
+                    |--------------|--------------------------------------------------------------------------|
+                    | 0   |        |                  |           |           |            |                  |
+         current -> | 1   |   1    |        1         |     5     |     0     |     5      |        0         |
+                    |-----------------------------------------------------------------------------------------|
+
+         */
+        assertHistogram(windowHistogram,
+                new ReferenceData() {{
+                    min = -8;
+                    max = 5;
+                    mean = 2; //(5*5+1*5+(-8))/11
+                    samplesCount = 11;
+
+                    overflow = false;
+                    underflow = true;
+
+                    percentile_00 = Long.MIN_VALUE; //underflow
+                    percentile_10 = Long.MIN_VALUE;
+                    percentile_20 = 0;
+                    percentile_30 = 0;
+                    percentile_40 = 0;
+                    percentile_50 = 0;
+                    percentile_60 = 0;
+                    percentile_70 = 4;
+                    percentile_80 = 4;
+                    percentile_90 = 4;
+                    percentile_100 = 4;
+                }});
+
+
+        //-----------------------------------
+        windowHistogram.add(14);
+        /*
+                    __________________________________________________________________________________________
+                    |Time | Window |                                 Buckets                                  |
+                    |     |        | #0 [MinValue, 0) | #1 [0, 2) | #2 [2, 4) |  #3 [4, 6) | #4 [6, MaxValue) |
+                    |--------------|--------------------------------------------------------------------------|
+                    | 0   |        |                  |           |           |            |                  |
+         current -> | 1   |   1    |        1         |     5     |     0     |     5      |        1         |
+                    |-----------------------------------------------------------------------------------------|
+
+         */
+        assertHistogram(windowHistogram,
+                new ReferenceData() {{
+                    min = -8;
+                    max = 14;
+                    mean = 3; //(5*5 + 1*5 + (-8) + 14)/12
+                    samplesCount = 12;
+
+                    overflow = true;
+                    underflow = true;
+
+                    percentile_00 = Long.MIN_VALUE; //underflow
+                    percentile_10 = Long.MIN_VALUE;
+                    percentile_20 = 0;
+                    percentile_30 = 0;
+                    percentile_40 = 0;
+                    percentile_50 = 0;
+                    percentile_60 = 4;
+                    percentile_70 = 4;
+                    percentile_80 = 4;
+                    percentile_90 = 4; //overflow
+                    percentile_100 = Long.MAX_VALUE; //overflow
+                }});
+
+
+        //-----------------------------------
+        windowHistogram.add(2); // should increment bucket #2
+        /*
+                    __________________________________________________________________________________________
+                    |Time | Window |                                 Buckets                                  |
+                    |     |        | #0 [MinValue, 0) | #1 [0, 2) | #2 [2, 4) |  #3 [4, 6) | #4 [6, MaxValue) |
+                    |--------------|--------------------------------------------------------------------------|
+                    | 0   |        |                  |           |           |            |                  |
+         current -> | 1   |   1    |        1         |     5     |     1     |     5      |        0         |
+                    |-----------------------------------------------------------------------------------------|
+
+         */
+        assertHistogram(windowHistogram,
+                new ReferenceData() {{
+                    min = -8;
+                    max = 14;
+                    mean = 2; //(5*5 + 1*5 + (-8) + 14 + 2)/13
+                    samplesCount = 13;
+
+                    overflow = true;
+                    underflow = true;
+
+                    percentile_00 = Long.MIN_VALUE; //underflow
+                    percentile_10 = Long.MIN_VALUE;
+                    percentile_20 = 0;
+                    percentile_30 = 0;
+                    percentile_40 = 0;
+                    percentile_50 = 0;
+                    percentile_60 = 2;
+                    percentile_70 = 4;
+                    percentile_80 = 4;
+                    percentile_90 = 4; //overflow
+                    percentile_100 = Long.MAX_VALUE; //overflow
                 }});
     }
 
@@ -201,6 +324,9 @@ public class WindowHistogramTest {
         assertEquals(referenceData.percentile_80, windowHistogram.getPercentile(0.8));
         assertEquals(referenceData.percentile_90, windowHistogram.getPercentile(0.9));
         assertEquals(referenceData.percentile_100, windowHistogram.getPercentile(1.0));
+
+        assertEquals(referenceData.overflow, windowHistogram.isOverflow());
+        assertEquals(referenceData.underflow, windowHistogram.isUnderflow());
 
 
         for (double i = 0.0; i < 0.10; i = i + 0.1) {
@@ -261,6 +387,8 @@ public class WindowHistogramTest {
         long percentile_80;
         long percentile_90;
         long percentile_100;
+        boolean overflow;
+        boolean underflow;
     }
 
 }

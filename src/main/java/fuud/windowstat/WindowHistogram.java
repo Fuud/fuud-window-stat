@@ -29,8 +29,13 @@ public class WindowHistogram {
      */
     public WindowHistogram(long[] bucketOffsets, Duration windowSize, int chunkCount, Clock clock) {
 
+        for (int i = 1; i < bucketOffsets.length; i++) {
+            if (bucketOffsets[i - 1] >= bucketOffsets[i]) {
+                throw new IllegalArgumentException("Bucket offsets should be monotonically increasing sequence");
+            }
+        }
+
         this.bucketOffsets = bucketOffsets;
-        //todo asserts
         buckets = new WindowCounter[bucketOffsets.length + 1];
         for (int i = 0; i < buckets.length; i++) {
             buckets[i] = new WindowCounter(windowSize, chunkCount, clock);
@@ -79,7 +84,7 @@ public class WindowHistogram {
                     if (bucketOffsetIndex < 0) {
                         return Long.MIN_VALUE; // can not calc
                     }
-                    if (bucketOffsetIndex >= bucketOffsets.length) {
+                    if (bucketOffsetIndex >= bucketOffsets.length - 1) {
                         return Long.MAX_VALUE; // overflow
                     }
                     return bucketOffsets[bucketOffsetIndex];
@@ -90,11 +95,11 @@ public class WindowHistogram {
     }
 
     public boolean isOverflow() {
-        return false;
+        return buckets[buckets.length - 1].getSum() > 0;
     }
 
     public boolean isUnderflow() {
-        return false;
+        return buckets[0].getSum() > 0;
     }
 
     public Bucket[] getSnapshot() {
