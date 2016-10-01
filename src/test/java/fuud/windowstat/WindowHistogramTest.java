@@ -7,12 +7,15 @@ import java.time.Duration;
 
 import static org.junit.Assert.*;
 
-public class WindowHistogramTest {
+public abstract class WindowHistogramTest {
+
+    protected abstract WindowHistogram createHistogram(long[] bucketOffsets, Duration windowSize, int chunkCount, MockClock clock);
+
     @Test
     public void testHistogram() {
         final MockClock clock = new MockClock();
         long bucketOffsets[] = new long[]{0, 2, 4, 6};
-        WindowHistogram windowHistogram = new WindowHistogram(bucketOffsets, Duration.ofSeconds(6), 3, clock);
+        WindowHistogram windowHistogram = createHistogram(bucketOffsets, Duration.ofSeconds(6), 3, clock);
 
         /*
                     __________________________________________________________________________________________

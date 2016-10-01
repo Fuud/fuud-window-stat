@@ -41,7 +41,7 @@ public class WindowMinMax {
     private final Clock clock;
     private final long chunkDurationMs;
 
-    private AtomicReference<Chunk> currentChunk;
+    private final AtomicReference<Chunk> currentChunk;
 
     public WindowMinMax(Duration windowSize, int chunkCount, Clock clock) {
         this.windowSize = windowSize;

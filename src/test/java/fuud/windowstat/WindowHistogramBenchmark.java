@@ -35,9 +35,15 @@ public class WindowHistogramBenchmark {
     private static final int THREAD_PER_OPERATION = 4;
 
     @State(Scope.Group)
-    public static class WindowHistState {
+    public static class WindowCounterHistState {
         private final long[] bucketOffsets = {0, 1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000, 10000};
-        public final WindowHistogram windowHistogram = new WindowHistogram(bucketOffsets, Duration.ofSeconds(3), 3, Clock.systemDefaultZone());
+        public final WindowHistogram windowHistogram = new CounterWindowHistogram(bucketOffsets, Duration.ofSeconds(3), 3, Clock.systemDefaultZone());
+    }
+
+    @State(Scope.Group)
+    public static class WindowCompactHistState {
+        private final long[] bucketOffsets = {0, 1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000, 10000};
+        public final WindowHistogram windowHistogram = new CompactWindowHistogram(bucketOffsets, Duration.ofSeconds(3), 3, Clock.systemDefaultZone());
     }
 
     @State(Scope.Group)
@@ -104,16 +110,30 @@ public class WindowHistogramBenchmark {
     }
 
     @Benchmark
-    @Group("window_hist_add_read")
+    @Group("window_counter_hist_add_read")
     @GroupThreads(THREAD_PER_OPERATION)
-    public void benchmarkAddRead_read(WindowHistState state) {
+    public void benchmarkAddRead_counter_read(WindowCounterHistState state) {
         state.windowHistogram.getPercentile(0.5);
     }
 
     @Benchmark
-    @Group("window_hist_add_read")
+    @Group("window_counter_hist_add_read")
     @GroupThreads(THREAD_PER_OPERATION)
-    public void benchmarkAddRead_write(WindowHistState state, WindowMinMaxData datas) {
+    public void benchmarkAddRead_counter_write(WindowCounterHistState state, WindowMinMaxData datas) {
+        state.windowHistogram.add(datas.nextValue());
+    }
+
+    @Benchmark
+    @Group("window_compact_hist_add_read")
+    @GroupThreads(THREAD_PER_OPERATION)
+    public void benchmarkAddRead_compact_read(WindowCompactHistState state) {
+        state.windowHistogram.getPercentile(0.5);
+    }
+
+    @Benchmark
+    @Group("window_compact_hist_add_read")
+    @GroupThreads(THREAD_PER_OPERATION)
+    public void benchmarkAddRead_compact_write(WindowCompactHistState state, WindowMinMaxData datas) {
         state.windowHistogram.add(datas.nextValue());
     }
 
